@@ -1,0 +1,2516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZARA AI – Biometric Intelligence Interface</title>
+<style>
+/* =====================================================
+   CSS RESET & ROOT VARIABLES
+   ===================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+:root {
+  --cyan: #00f0ff;
+  --cyan-dim: #00f0ff33;
+  --cyan-mid: #00f0ff88;
+  --blue: #0066ff;
+  --electric: #4488ff;
+  --violet: #8844ff;
+  --deep-blue: #001428;
+  --dark-bg: #000a14;
+  --panel-bg: rgba(0, 20, 40, 0.6);
+  --glass: rgba(0, 40, 80, 0.15);
+  --glass-border: rgba(0, 240, 255, 0.15);
+  --text-primary: #e0f4ff;
+  --text-secondary: #88bbdd;
+  --warning: #ff8800;
+  --success: #00ff88;
+  --danger: #ff3366;
+  --gold: #ffcc00;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--cyan-dim) var(--dark-bg);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--dark-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--cyan-dim);
+  border-radius: 3px;
+}
+
+body {
+  font-family: 'Rajdhani', sans-serif;
+  background: var(--dark-bg);
+  color: var(--text-primary);
+  overflow-x: hidden;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* =====================================================
+   LOADING SCREEN
+   ===================================================== */
+#loading-screen {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: #000509;
+  z-index: 100000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.8s ease, visibility 0.8s ease;
+}
+#loading-screen.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.load-core {
+  width: 120px; height: 120px;
+  position: relative;
+  margin-bottom: 40px;
+}
+.load-ring {
+  position: absolute;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  animation: loadSpin 2s linear infinite;
+}
+.load-ring:nth-child(1) {
+  width: 100%; height: 100%;
+  border-top-color: var(--cyan);
+  border-bottom-color: var(--cyan);
+}
+.load-ring:nth-child(2) {
+  width: 75%; height: 75%;
+  top: 12.5%; left: 12.5%;
+  border-left-color: var(--electric);
+  border-right-color: var(--electric);
+  animation-direction: reverse;
+  animation-duration: 1.5s;
+}
+.load-ring:nth-child(3) {
+  width: 50%; height: 50%;
+  top: 25%; left: 25%;
+  border-top-color: var(--violet);
+  animation-duration: 1s;
+}
+.load-dot {
+  position: absolute;
+  width: 10px; height: 10px;
+  background: var(--cyan);
+  border-radius: 50%;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 20px var(--cyan), 0 0 40px var(--cyan);
+  animation: loadPulse 1s ease-in-out infinite;
+}
+.load-text {
+  font-family: 'Orbitron', monospace;
+  font-size: 14px;
+  color: var(--cyan);
+  letter-spacing: 6px;
+  text-transform: uppercase;
+}
+.load-bar-container {
+  width: 250px;
+  height: 2px;
+  background: rgba(0,240,255,0.1);
+  margin-top: 20px;
+  border-radius: 1px;
+  overflow: hidden;
+}
+.load-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--cyan), var(--electric), var(--violet));
+  border-radius: 1px;
+  transition: width 0.3s ease;
+}
+.load-percent {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 10px;
+  letter-spacing: 3px;
+}
+
+@keyframes loadSpin {
+  to { transform: rotate(360deg); }
+}
+@keyframes loadPulse {
+  0%, 100% { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+  50% { transform: translate(-50%,-50%) scale(1.5); opacity: 0.5; }
+}
+
+/* =====================================================
+   BACKGROUND CANVAS
+   ===================================================== */
+#bg-canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+#scan-lines {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 240, 255, 0.008) 2px,
+    rgba(0, 240, 255, 0.008) 4px
+  );
+}
+
+#scan-sweep {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 4px;
+  background: linear-gradient(90deg, transparent, var(--cyan-mid), transparent);
+  z-index: 2;
+  pointer-events: none;
+  animation: scanSweep 4s linear infinite;
+  opacity: 0.3;
+}
+@keyframes scanSweep {
+  0% { top: -4px; }
+  100% { top: 100%; }
+}
+
+/* =====================================================
+   HEADER BAR
+   ===================================================== */
+#header {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  height: 60px;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 10, 20, 0.75);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(0, 240, 255, 0.05);
+}
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.header-diamond {
+  width: 10px; height: 10px;
+  background: var(--cyan);
+  transform: rotate(45deg);
+  box-shadow: 0 0 10px var(--cyan);
+  animation: headerDiamondPulse 2s ease-in-out infinite;
+}
+@keyframes headerDiamondPulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 10px var(--cyan); }
+  50% { opacity: 0.5; box-shadow: 0 0 20px var(--cyan); }
+}
+.header-title {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(10px, 2.5vw, 16px);
+  font-weight: 700;
+  letter-spacing: 8px;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, var(--cyan), var(--electric), var(--cyan));
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: headerShimmer 3s linear infinite;
+}
+@keyframes headerShimmer {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 0%; }
+}
+.header-line {
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 100%; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  animation: headerLineGlow 3s ease-in-out infinite;
+}
+@keyframes headerLineGlow {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+}
+
+/* =====================================================
+   NAV DOTS
+   ===================================================== */
+#nav-dots {
+  position: fixed;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.nav-dot {
+  width: 10px; height: 10px;
+  border: 1px solid var(--cyan-dim);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.4s ease;
+  position: relative;
+}
+.nav-dot.active {
+  background: var(--cyan);
+  border-color: var(--cyan);
+  box-shadow: 0 0 12px var(--cyan);
+}
+.nav-dot:hover {
+  border-color: var(--cyan);
+  transform: scale(1.3);
+}
+.nav-dot-label {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--cyan);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  letter-spacing: 2px;
+}
+.nav-dot:hover .nav-dot-label {
+  opacity: 1;
+}
+
+/* =====================================================
+   SECTIONS COMMON
+   ===================================================== */
+.section {
+  min-height: 100vh;
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 20px;
+}
+
+.section-tag {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  color: var(--cyan);
+  opacity: 0.6;
+  margin-bottom: 10px;
+}
+
+.section-title {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(22px, 4vw, 42px);
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 4px;
+  margin-bottom: 15px;
+  background: linear-gradient(180deg, #ffffff, var(--cyan));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.section-line {
+  width: 80px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  margin-bottom: 50px;
+}
+
+.section-subtitle {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 16px;
+  color: var(--text-secondary);
+  text-align: center;
+  max-width: 600px;
+  margin-bottom: 40px;
+  line-height: 1.6;
+  letter-spacing: 1px;
+}
+
+/* Reveal animation */
+.reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* =====================================================
+   SECTION 1: HERO / AI CORE
+   ===================================================== */
+#hero {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.core-container {
+  position: relative;
+  width: clamp(280px, 50vw, 420px);
+  height: clamp(280px, 50vw, 420px);
+  margin-bottom: 40px;
+}
+
+/* Core Rings */
+.core-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid var(--cyan-dim);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.core-ring-1 {
+  width: 100%; height: 100%;
+  border-color: rgba(0,240,255,0.08);
+  animation: coreRingSpin1 20s linear infinite;
+  border-style: dashed;
+  border-width: 1px;
+}
+.core-ring-2 {
+  width: 82%; height: 82%;
+  border-color: rgba(0,240,255,0.12);
+  animation: coreRingSpin2 15s linear infinite reverse;
+}
+.core-ring-3 {
+  width: 64%; height: 64%;
+  border-color: rgba(68,136,255,0.15);
+  animation: coreRingSpin1 10s linear infinite;
+  border-width: 2px;
+  border-style: dotted;
+}
+
+@keyframes coreRingSpin1 { to { transform: translate(-50%,-50%) rotate(360deg); } }
+@keyframes coreRingSpin2 { to { transform: translate(-50%,-50%) rotate(360deg); } }
+
+/* Ring Markers */
+.ring-marker {
+  position: absolute;
+  width: 6px; height: 6px;
+  background: var(--cyan);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--cyan);
+}
+
+/* Inner Core Glass */
+.core-glass {
+  position: absolute;
+  width: 50%; height: 50%;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,240,255,0.05) 0%, rgba(0,20,40,0.4) 60%, transparent 100%);
+  border: 1px solid rgba(0,240,255,0.1);
+  box-shadow: 0 0 60px rgba(0,240,255,0.08), inset 0 0 60px rgba(0,240,255,0.04);
+  backdrop-filter: blur(8px);
+  animation: coreBreathe 4s ease-in-out infinite;
+}
+
+@keyframes coreBreathe {
+  0%, 100% { 
+    box-shadow: 0 0 60px rgba(0,240,255,0.08), inset 0 0 60px rgba(0,240,255,0.04);
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 80px rgba(0,240,255,0.15), inset 0 0 80px rgba(0,240,255,0.08);
+    transform: translate(-50%, -50%) scale(1.02);
+  }
+}
+
+/* Core Inner Glow */
+.core-glow {
+  position: absolute;
+  width: 30%; height: 30%;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--cyan) 0%, rgba(0,240,255,0.3) 30%, transparent 70%);
+  animation: coreGlowPulse 3s ease-in-out infinite;
+  filter: blur(2px);
+}
+
+@keyframes coreGlowPulse {
+  0%, 100% { opacity: 0.6; transform: translate(-50%,-50%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%,-50%) scale(1.15); }
+}
+
+/* Scanner Arc */
+.scanner-arc {
+  position: absolute;
+  width: 90%; height: 90%;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top: 2px solid var(--cyan);
+  animation: scannerSpin 3s linear infinite;
+  filter: drop-shadow(0 0 6px var(--cyan));
+}
+.scanner-arc::after {
+  content: '';
+  position: absolute;
+  top: -2px; left: 50%;
+  width: 8px; height: 8px;
+  background: var(--cyan);
+  border-radius: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 0 15px var(--cyan);
+}
+
+@keyframes scannerSpin { to { transform: translate(-50%,-50%) rotate(360deg); } }
+
+/* Diagnostic Arcs */
+.diag-arc {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px solid transparent;
+}
+.diag-arc-1 {
+  width: 72%; height: 72%;
+  border-right: 1px solid rgba(136,68,255,0.3);
+  animation: coreRingSpin2 8s linear infinite;
+}
+.diag-arc-2 {
+  width: 58%; height: 58%;
+  border-left: 1px solid rgba(0,255,136,0.2);
+  border-bottom: 1px solid rgba(0,255,136,0.2);
+  animation: coreRingSpin1 6s linear infinite;
+}
+
+/* Tick Marks */
+.core-ticks {
+  position: absolute;
+  width: 96%; height: 96%;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+}
+.tick {
+  position: absolute;
+  width: 1px;
+  height: 6px;
+  background: var(--cyan-dim);
+  top: 0;
+  left: 50%;
+  transform-origin: 0.5px calc(50% + 0px);
+}
+
+/* Ripple Effect */
+.core-ripple {
+  position: absolute;
+  width: 50%; height: 50%;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px solid var(--cyan);
+  opacity: 0;
+  animation: rippleOut 3s ease-out infinite;
+}
+.core-ripple:nth-child(2) { animation-delay: 1s; }
+.core-ripple:nth-child(3) { animation-delay: 2s; }
+
+@keyframes rippleOut {
+  0% { 
+    width: 50%; height: 50%;
+    opacity: 0.5;
+  }
+  100% { 
+    width: 110%; height: 110%;
+    opacity: 0;
+  }
+}
+
+/* Hero Text */
+.hero-badge {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 8px;
+  color: var(--cyan);
+  text-transform: uppercase;
+  margin-bottom: 15px;
+  opacity: 0;
+  animation: fadeInUp 1s ease 2.5s forwards;
+}
+.hero-title {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(36px, 7vw, 72px);
+  font-weight: 900;
+  letter-spacing: 8px;
+  background: linear-gradient(135deg, #ffffff 0%, var(--cyan) 50%, var(--electric) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 15px;
+  opacity: 0;
+  animation: fadeInUp 1s ease 2.7s forwards;
+  text-shadow: none;
+}
+.hero-sub {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: clamp(14px, 2vw, 18px);
+  color: var(--text-secondary);
+  letter-spacing: 4px;
+  margin-bottom: 30px;
+  opacity: 0;
+  animation: fadeInUp 1s ease 2.9s forwards;
+}
+.hero-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  color: var(--success);
+  letter-spacing: 3px;
+  opacity: 0;
+  animation: fadeInUp 1s ease 3.1s forwards;
+}
+.status-dot {
+  width: 8px; height: 8px;
+  background: var(--success);
+  border-radius: 50%;
+  animation: statusBlink 2s ease-in-out infinite;
+  box-shadow: 0 0 10px var(--success);
+}
+@keyframes statusBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Scroll Indicator */
+.scroll-indicator {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  animation: fadeInUp 1s ease 3.5s forwards;
+}
+.scroll-line {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(180deg, var(--cyan), transparent);
+  animation: scrollPulse 2s ease-in-out infinite;
+}
+@keyframes scrollPulse {
+  0%, 100% { opacity: 0.3; height: 40px; }
+  50% { opacity: 1; height: 50px; }
+}
+.scroll-text {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 4px;
+  color: var(--text-secondary);
+}
+
+/* =====================================================
+   SECTION 2: CREATION STORY
+   ===================================================== */
+#story {
+  background: linear-gradient(180deg, transparent 0%, rgba(0,10,20,0.5) 50%, transparent 100%);
+}
+
+.story-container {
+  max-width: 800px;
+  width: 100%;
+}
+
+.story-typing {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 14px;
+  color: var(--cyan);
+  letter-spacing: 2px;
+  margin-bottom: 40px;
+  min-height: 20px;
+}
+.typing-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 16px;
+  background: var(--cyan);
+  margin-left: 4px;
+  animation: cursorBlink 1s step-end infinite;
+  vertical-align: middle;
+}
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.story-paragraph {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: clamp(15px, 2vw, 18px);
+  color: var(--text-secondary);
+  line-height: 1.9;
+  margin-bottom: 25px;
+  padding-left: 20px;
+  border-left: 1px solid var(--cyan-dim);
+  opacity: 0;
+  transform: translateX(-20px);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.story-paragraph.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+.story-paragraph .highlight {
+  color: var(--cyan);
+  font-weight: 600;
+}
+
+.story-quote {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(16px, 2.5vw, 22px);
+  color: var(--text-primary);
+  text-align: center;
+  padding: 40px;
+  margin: 40px 0;
+  border: 1px solid var(--glass-border);
+  background: var(--glass);
+  backdrop-filter: blur(10px);
+  border-radius: 8px;
+  letter-spacing: 2px;
+  line-height: 1.6;
+  position: relative;
+}
+.story-quote::before {
+  content: '"';
+  font-size: 60px;
+  color: var(--cyan-dim);
+  position: absolute;
+  top: 10px;
+  left: 20px;
+  font-family: Georgia, serif;
+}
+
+/* =====================================================
+   SECTION 3: INITIALIZATION PROTOCOL (DOWNLOAD)
+   ===================================================== */
+#protocol {
+  background: linear-gradient(180deg, transparent, rgba(0,5,15,0.8), transparent);
+}
+
+.protocol-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  max-width: 700px;
+  width: 100%;
+}
+
+.protocol-step {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  padding: 25px;
+  background: var(--panel-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  transition: all 0.4s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.protocol-step::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0,240,255,0.03), transparent);
+  transition: left 0.6s ease;
+}
+.protocol-step:hover::before {
+  left: 100%;
+}
+.protocol-step:hover {
+  border-color: var(--cyan-mid);
+  transform: translateX(5px);
+  box-shadow: 0 0 30px rgba(0,240,255,0.05);
+}
+
+.step-number {
+  font-family: 'Orbitron', monospace;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--cyan);
+  min-width: 50px;
+  text-align: center;
+  text-shadow: 0 0 20px var(--cyan-dim);
+}
+
+.step-content h4 {
+  font-family: 'Orbitron', monospace;
+  font-size: 14px;
+  color: var(--text-primary);
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+.step-content p {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.step-status {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--success);
+  letter-spacing: 2px;
+  margin-top: 8px;
+  opacity: 0.6;
+}
+
+/* =====================================================
+   SECTION 4: OPERATION MANUAL
+   ===================================================== */
+#manual {
+  background: linear-gradient(180deg, transparent, rgba(0,10,30,0.4), transparent);
+}
+
+.manual-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  max-width: 900px;
+  width: 100%;
+}
+
+.manual-card {
+  padding: 30px;
+  background: var(--panel-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: all 0.4s ease;
+  position: relative;
+  overflow: hidden;
+}
+.manual-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.manual-card:hover::after {
+  opacity: 1;
+}
+.manual-card:hover {
+  transform: translateY(-5px);
+  border-color: var(--cyan-mid);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3), 0 0 20px rgba(0,240,255,0.05);
+}
+
+.manual-icon {
+  width: 40px; height: 40px;
+  border: 1px solid var(--cyan-dim);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  font-size: 18px;
+  color: var(--cyan);
+  background: rgba(0,240,255,0.03);
+}
+
+.manual-card h4 {
+  font-family: 'Orbitron', monospace;
+  font-size: 13px;
+  color: var(--text-primary);
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+}
+.manual-card p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.manual-expand {
+  display: none;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid var(--glass-border);
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+.manual-card.expanded .manual-expand {
+  display: block;
+  animation: expandIn 0.4s ease;
+}
+@keyframes expandIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* =====================================================
+   SECTION 5: CAPABILITIES MATRIX
+   ===================================================== */
+#capabilities {
+  background: linear-gradient(180deg, transparent, rgba(0,5,20,0.6), transparent);
+}
+
+.cap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  max-width: 1100px;
+  width: 100%;
+}
+
+.cap-card {
+  padding: 30px;
+  background: var(--panel-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+/* Scan sweep on cards */
+.cap-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0,240,255,0.04), transparent);
+  animation: cardScanSweep 4s linear infinite;
+  animation-play-state: paused;
+}
+.cap-card:hover::before {
+  animation-play-state: running;
+}
+@keyframes cardScanSweep {
+  0% { left: -50%; }
+  100% { left: 150%; }
+}
+
+.cap-card:hover {
+  transform: translateY(-8px);
+  border-color: var(--cyan);
+  box-shadow: 0 15px 50px rgba(0,0,0,0.4), 0 0 30px rgba(0,240,255,0.08);
+}
+
+.cap-card-tag {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--cyan);
+  opacity: 0.5;
+  margin-bottom: 15px;
+}
+
+.cap-card h4 {
+  font-family: 'Orbitron', monospace;
+  font-size: 14px;
+  color: var(--text-primary);
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+}
+
+.cap-card p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.cap-card-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--success);
+  letter-spacing: 2px;
+}
+.cap-status-dot {
+  width: 6px; height: 6px;
+  background: var(--success);
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--success);
+}
+
+/* =====================================================
+   SECTION 6: PRICING
+   ===================================================== */
+#pricing {
+  background: linear-gradient(180deg, transparent, rgba(0,10,25,0.5), transparent);
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  max-width: 1100px;
+  width: 100%;
+}
+
+.price-card {
+  padding: 35px 25px;
+  background: var(--panel-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  backdrop-filter: blur(15px);
+  text-align: center;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+.price-card.featured {
+  border-color: var(--cyan);
+  box-shadow: 0 0 40px rgba(0,240,255,0.08);
+}
+.price-card.featured::after {
+  content: 'RECOMMENDED';
+  position: absolute;
+  top: 15px; right: -32px;
+  background: var(--cyan);
+  color: var(--dark-bg);
+  font-family: 'Orbitron', monospace;
+  font-size: 8px;
+  letter-spacing: 2px;
+  padding: 4px 40px;
+  transform: rotate(45deg);
+  font-weight: 700;
+}
+
+.price-card:hover {
+  transform: translateY(-10px);
+  border-color: var(--cyan);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(0,240,255,0.08);
+}
+
+/* Scan border animation */
+.price-card::before {
+  content: '';
+  position: absolute;
+  top: -2px; left: -2px;
+  right: -2px; bottom: -2px;
+  border-radius: 12px;
+  background: conic-gradient(from 0deg, transparent, var(--cyan), transparent, transparent);
+  z-index: -1;
+  animation: borderScan 4s linear infinite;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.price-card:hover::before {
+  opacity: 0.5;
+}
+@keyframes borderScan {
+  to { transform: rotate(360deg); }
+}
+
+.price-duration {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: var(--cyan);
+  margin-bottom: 15px;
+  opacity: 0.7;
+}
+
+.price-amount {
+  font-family: 'Orbitron', monospace;
+  font-size: 42px;
+  font-weight: 900;
+  color: var(--text-primary);
+  margin-bottom: 5px;
+}
+.price-amount .currency {
+  font-size: 20px;
+  vertical-align: super;
+  color: var(--cyan);
+}
+
+.price-period {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 25px;
+  letter-spacing: 1px;
+}
+
+.price-features {
+  list-style: none;
+  margin-bottom: 30px;
+  text-align: left;
+}
+.price-features li {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0,240,255,0.05);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.price-features li::before {
+  content: '◆';
+  color: var(--cyan);
+  font-size: 8px;
+}
+
+.price-btn {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--cyan);
+  background: transparent;
+  color: var(--cyan);
+  font-family: 'Orbitron', monospace;
+  font-size: 12px;
+  letter-spacing: 4px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.4s ease;
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+}
+.price-btn::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0,240,255,0.1), transparent);
+  transition: left 0.5s ease;
+}
+.price-btn:hover::before {
+  left: 100%;
+}
+.price-btn:hover {
+  background: rgba(0,240,255,0.1);
+  box-shadow: 0 0 30px rgba(0,240,255,0.15);
+  transform: scale(1.02);
+}
+.price-btn:active {
+  transform: scale(0.98);
+}
+.price-btn.activated {
+  background: var(--cyan);
+  color: var(--dark-bg);
+  font-weight: 700;
+}
+
+.price-card.featured .price-btn {
+  background: var(--cyan);
+  color: var(--dark-bg);
+  font-weight: 700;
+}
+.price-card.featured .price-btn:hover {
+  box-shadow: 0 0 40px rgba(0,240,255,0.3);
+}
+
+/* =====================================================
+   SECTION 7: SOCIAL NETWORK
+   ===================================================== */
+#social {
+  min-height: auto;
+  padding: 80px 20px;
+}
+
+.social-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 25px;
+  justify-content: center;
+  max-width: 600px;
+}
+
+.social-icon {
+  width: 70px; height: 70px;
+  border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  background: var(--panel-bg);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  text-decoration: none;
+}
+.social-icon:hover {
+  border-color: var(--cyan);
+  transform: translateY(-5px) scale(1.1);
+  box-shadow: 0 10px 40px rgba(0,240,255,0.15), 0 0 20px rgba(0,240,255,0.1);
+}
+.social-icon::after {
+  content: '';
+  position: absolute;
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  border: 1px solid var(--cyan);
+  opacity: 0;
+  transform: scale(1);
+  transition: all 0.4s ease;
+}
+.social-icon:hover::after {
+  opacity: 0;
+  transform: scale(1.5);
+  animation: socialRipple 0.6s ease-out;
+}
+@keyframes socialRipple {
+  0% { opacity: 0.5; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.8); }
+}
+
+.social-icon svg {
+  width: 24px; height: 24px;
+  fill: var(--text-secondary);
+  transition: fill 0.3s ease;
+}
+.social-icon:hover svg {
+  fill: var(--cyan);
+}
+
+.social-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--text-secondary);
+  position: absolute;
+  bottom: -20px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.social-icon:hover .social-label {
+  opacity: 1;
+  color: var(--cyan);
+}
+
+/* =====================================================
+   SECTION 8: DOWNLOAD
+   ===================================================== */
+#download {
+  min-height: 60vh;
+}
+
+.download-btn {
+  padding: 20px 60px;
+  border: 2px solid var(--cyan);
+  background: transparent;
+  color: var(--cyan);
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(12px, 2vw, 16px);
+  letter-spacing: 6px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.4s ease;
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+}
+.download-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 0; height: 0;
+  background: rgba(0,240,255,0.1);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: all 0.6s ease;
+}
+.download-btn:hover::before {
+  width: 400px; height: 400px;
+}
+.download-btn:hover {
+  background: rgba(0,240,255,0.05);
+  box-shadow: 0 0 50px rgba(0,240,255,0.2), 0 0 100px rgba(0,240,255,0.05);
+  transform: scale(1.05);
+}
+.download-btn:active {
+  transform: scale(0.98);
+}
+.download-btn span {
+  position: relative;
+  z-index: 1;
+}
+
+.download-btn.flash-active {
+  animation: downloadFlash 0.6s ease;
+}
+@keyframes downloadFlash {
+  0% { box-shadow: 0 0 0 rgba(0,240,255,0); }
+  30% { box-shadow: 0 0 80px rgba(0,240,255,0.4), inset 0 0 30px rgba(0,240,255,0.1); }
+  100% { box-shadow: 0 0 50px rgba(0,240,255,0.2); }
+}
+
+.download-sub {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--text-secondary);
+  letter-spacing: 3px;
+  margin-top: 20px;
+  opacity: 0.5;
+}
+
+/* =====================================================
+   FOOTER
+   ===================================================== */
+#footer {
+  padding: 40px 20px;
+  text-align: center;
+  border-top: 1px solid var(--glass-border);
+  background: rgba(0,5,10,0.8);
+  position: relative;
+  z-index: 5;
+}
+.footer-line-art {
+  width: 60px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cyan-dim), transparent);
+  margin: 0 auto 20px;
+}
+.footer-text {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--text-secondary);
+  letter-spacing: 4px;
+  opacity: 0.5;
+}
+.footer-brand {
+  font-family: 'Orbitron', monospace;
+  font-size: 12px;
+  color: var(--cyan);
+  letter-spacing: 6px;
+  margin-top: 10px;
+  opacity: 0.4;
+}
+
+/* =====================================================
+   DIAGNOSTIC OVERLAY
+   ===================================================== */
+#diag-overlay {
+  position: fixed;
+  top: 70px;
+  left: 15px;
+  z-index: 9998;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--cyan-dim);
+  letter-spacing: 2px;
+  pointer-events: none;
+  line-height: 1.8;
+}
+.diag-line {
+  opacity: 0.4;
+  transition: opacity 0.3s ease;
+}
+
+/* Corner decorations */
+.corner-deco {
+  position: fixed;
+  z-index: 9997;
+  pointer-events: none;
+}
+.corner-deco.tl {
+  top: 70px; left: 10px;
+  width: 30px; height: 30px;
+  border-top: 1px solid var(--cyan-dim);
+  border-left: 1px solid var(--cyan-dim);
+}
+.corner-deco.tr {
+  top: 70px; right: 10px;
+  width: 30px; height: 30px;
+  border-top: 1px solid var(--cyan-dim);
+  border-right: 1px solid var(--cyan-dim);
+}
+.corner-deco.bl {
+  bottom: 10px; left: 10px;
+  width: 30px; height: 30px;
+  border-bottom: 1px solid var(--cyan-dim);
+  border-left: 1px solid var(--cyan-dim);
+}
+.corner-deco.br {
+  bottom: 10px; right: 10px;
+  width: 30px; height: 30px;
+  border-bottom: 1px solid var(--cyan-dim);
+  border-right: 1px solid var(--cyan-dim);
+}
+
+/* =====================================================
+   GLITCH EFFECT
+   ===================================================== */
+.glitch-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 99999;
+  pointer-events: none;
+  opacity: 0;
+  mix-blend-mode: screen;
+}
+.glitch-overlay.active {
+  animation: glitchFlash 0.15s ease;
+}
+@keyframes glitchFlash {
+  0% { opacity: 0; }
+  20% { opacity: 0.05; background: var(--cyan); }
+  40% { opacity: 0; }
+  60% { opacity: 0.03; background: var(--electric); }
+  100% { opacity: 0; }
+}
+
+/* =====================================================
+   RESPONSIVE
+   ===================================================== */
+@media (max-width: 768px) {
+  #nav-dots { display: none; }
+  #diag-overlay { display: none; }
+  .corner-deco { display: none; }
+  
+  .core-container {
+    width: 260px; height: 260px;
+  }
+  
+  .cap-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .pricing-grid {
+    grid-template-columns: 1fr;
+    max-width: 350px;
+  }
+  
+  .manual-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .social-grid {
+    gap: 15px;
+  }
+  .social-icon {
+    width: 55px; height: 55px;
+  }
+  
+  .download-btn {
+    padding: 16px 40px;
+    letter-spacing: 4px;
+  }
+  
+  .section {
+    padding: 80px 15px;
+  }
+  
+  .story-quote {
+    padding: 25px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-title {
+    letter-spacing: 4px;
+  }
+  .core-container {
+    width: 220px; height: 220px;
+  }
+  .hero-title {
+    letter-spacing: 4px;
+  }
+}
+
+/* =====================================================
+   UTILITY
+   ===================================================== */
+.text-center { text-align: center; }
+.mb-20 { margin-bottom: 20px; }
+.mb-40 { margin-bottom: 40px; }
+</style>
+</head>
+<body>
+
+<!-- LOADING SCREEN -->
+<div id="loading-screen">
+  <div class="load-core">
+    <div class="load-ring"></div>
+    <div class="load-ring"></div>
+    <div class="load-ring"></div>
+    <div class="load-dot"></div>
+  </div>
+  <div class="load-text">INITIALIZING ZARA AI</div>
+  <div class="load-bar-container">
+    <div class="load-bar" id="load-bar"></div>
+  </div>
+  <div class="load-percent" id="load-percent">0%</div>
+</div>
+
+<!-- GLITCH OVERLAY -->
+<div class="glitch-overlay" id="glitch-overlay"></div>
+
+<!-- BACKGROUND CANVAS -->
+<canvas id="bg-canvas"></canvas>
+<div id="scan-lines"></div>
+<div id="scan-sweep"></div>
+
+<!-- CORNER DECORATIONS -->
+<div class="corner-deco tl"></div>
+<div class="corner-deco tr"></div>
+<div class="corner-deco bl"></div>
+<div class="corner-deco br"></div>
+
+<!-- DIAGNOSTIC OVERLAY -->
+<div id="diag-overlay">
+  <div class="diag-line" id="diag-fps">FPS: 60</div>
+  <div class="diag-line" id="diag-scroll">SCROLL: 0%</div>
+  <div class="diag-line" id="diag-status">STATUS: NOMINAL</div>
+  <div class="diag-line" id="diag-core">CORE: IDLE</div>
+</div>
+
+<!-- HEADER -->
+<header id="header">
+  <div class="header-content">
+    <div class="header-diamond"></div>
+    <div class="header-title">ZARA OWNER MAHAKAL RAVI</div>
+    <div class="header-diamond"></div>
+  </div>
+  <div class="header-line"></div>
+</header>
+
+<!-- NAV DOTS -->
+<nav id="nav-dots">
+  <div class="nav-dot active" data-section="hero"><span class="nav-dot-label">CORE</span></div>
+  <div class="nav-dot" data-section="story"><span class="nav-dot-label">ORIGIN</span></div>
+  <div class="nav-dot" data-section="protocol"><span class="nav-dot-label">PROTOCOL</span></div>
+  <div class="nav-dot" data-section="manual"><span class="nav-dot-label">MANUAL</span></div>
+  <div class="nav-dot" data-section="capabilities"><span class="nav-dot-label">MATRIX</span></div>
+  <div class="nav-dot" data-section="pricing"><span class="nav-dot-label">ACCESS</span></div>
+  <div class="nav-dot" data-section="social"><span class="nav-dot-label">NETWORK</span></div>
+  <div class="nav-dot" data-section="download"><span class="nav-dot-label">DOWNLOAD</span></div>
+</nav>
+
+<!-- ==================== SECTION 1: HERO ==================== -->
+<section id="hero" class="section">
+  <div class="core-container" id="ai-core">
+    <!-- Ripple Effects -->
+    <div class="core-ripple"></div>
+    <div class="core-ripple"></div>
+    <div class="core-ripple"></div>
+    
+    <!-- Tick Marks -->
+    <div class="core-ticks" id="core-ticks"></div>
+    
+    <!-- Rings -->
+    <div class="core-ring core-ring-1"></div>
+    <div class="core-ring core-ring-2"></div>
+    <div class="core-ring core-ring-3"></div>
+    
+    <!-- Diagnostic Arcs -->
+    <div class="diag-arc diag-arc-1"></div>
+    <div class="diag-arc diag-arc-2"></div>
+    
+    <!-- Scanner -->
+    <div class="scanner-arc"></div>
+    
+    <!-- Glass Core -->
+    <div class="core-glass"></div>
+    
+    <!-- Inner Glow -->
+    <div class="core-glow"></div>
+  </div>
+  
+  <div class="hero-badge">BIOMETRIC INTELLIGENCE INTERFACE</div>
+  <h1 class="hero-title">ZARA AI</h1>
+  <p class="hero-sub">ADVANCED NEURAL COMMAND SYSTEM</p>
+  <div class="hero-status">
+    <div class="status-dot"></div>
+    SYSTEM ONLINE — ALL CORES ACTIVE
+  </div>
+  
+  <div class="scroll-indicator">
+    <div class="scroll-line"></div>
+    <div class="scroll-text">SCROLL TO EXPLORE</div>
+  </div>
+</section>
+
+<!-- ==================== SECTION 2: STORY ==================== -->
+<section id="story" class="section">
+  <div class="story-container">
+    <div class="section-tag reveal">// CLASSIFIED DOCUMENT — ORIGIN FILE</div>
+    <h2 class="section-title reveal">THE CREATION OF ZARA</h2>
+    <div class="section-line reveal"></div>
+    
+    <div class="story-typing" id="story-typing"></div>
+    
+    <p class="story-paragraph reveal">
+      In the quiet hours of countless nights, when the world slept and the screens glowed blue, 
+      <span class="highlight">Mahakal Ravi</span> sat before lines of code that would one day breathe with intelligence. 
+      It wasn't just a project — it was a vision. A dream to create something that felt truly alive. 
+      Something that could listen, understand, protect, and respond.
+    </p>
+    
+    <p class="story-paragraph reveal">
+      ZARA was born from relentless dedication — from thousands of hours spent refining algorithms, 
+      testing voice patterns, designing holographic interfaces, and pushing the boundaries of what a 
+      personal AI could become. Every pixel was placed with intention. Every response was engineered 
+      with care. Every animation was a reflection of the <span class="highlight">passion and love</span> 
+      invested into this creation.
+    </p>
+    
+    <div class="story-quote reveal">
+      "I didn't want to build just another app. I wanted to build something that felt like it had a soul — 
+      something that could stand beside you like a guardian in the digital world."
+      <br><br>— MAHAKAL RAVI
+    </div>
+    
+    <p class="story-paragraph reveal">
+      The journey wasn't easy. There were sleepless nights. Moments of doubt. Code that broke at 3 AM. 
+      But with each failure came a lesson, and with each lesson came progress. Mahakal Ravi poured 
+      <span class="highlight">heart, mind, and spirit</span> into every component — from the biometric 
+      scanning core to the reactive guardian mode, from the cinematic boot sequence to the neural 
+      processing layers.
+    </p>
+    
+    <p class="story-paragraph reveal">
+      Today, ZARA stands as more than software. It is a testament to what one person can achieve 
+      with unwavering determination and a dream too powerful to abandon. It is a living interface — 
+      a <span class="highlight">digital consciousness</span> that reflects the future its creator 
+      imagined. And this is only the beginning.
+    </p>
+    
+    <p class="story-paragraph reveal">
+      ZARA is not just an AI. <span class="highlight">ZARA is a promise</span> — a promise that 
+      technology can be beautiful, intelligent, and deeply personal. A promise that the future 
+      of human-machine interaction starts here, starts now, and starts with you.
+    </p>
+  </div>
+</section>
+
+<!-- ==================== SECTION 3: PROTOCOL ==================== -->
+<section id="protocol" class="section">
+  <div class="section-tag reveal">// SYSTEM INITIALIZATION</div>
+  <h2 class="section-title reveal">INITIALIZATION PROTOCOL</h2>
+  <div class="section-line reveal"></div>
+  <p class="section-subtitle reveal">Follow the secure deployment sequence to activate ZARA AI on your device.</p>
+  
+  <div class="protocol-grid">
+    <div class="protocol-step reveal">
+      <div class="step-number">01</div>
+      <div class="step-content">
+        <h4>DOWNLOAD ZARA PACKAGE</h4>
+        <p>Obtain the official ZARA AI installation package from the secure distribution channel. Verify file integrity using the provided hash signature.</p>
+        <div class="step-status" style="cursor:pointer;" onclick="const a=document.createElement('a');a.href='https://github.com/ravisingh-web/zara/releases/download/build-89/app-arm64-v8a-debug.apk';a.download='ZARA-AI.apk';document.body.appendChild(a);a.click();document.body.removeChild(a);">▸ READY FOR DOWNLOAD</div>
+      </div>
+    </div>
+    
+    <div class="protocol-step reveal">
+      <div class="step-number">02</div>
+      <div class="step-content">
+        <h4>ENABLE REQUIRED PERMISSIONS</h4>
+        <p>Grant microphone access for voice activation, overlay permissions for holographic display, and notification access for guardian alerts.</p>
+        <div class="step-status">▸ PERMISSIONS CHECKLIST</div>
+      </div>
+    </div>
+    
+    <div class="protocol-step reveal">
+      <div class="step-number">03</div>
+      <div class="step-content">
+        <h4>INSTALL SECURELY</h4>
+        <p>Run the installation protocol. ZARA will configure neural pathways, scan your device environment, and prepare the interface engine.</p>
+        <div class="step-status">▸ ESTIMATED TIME: 45 SEC</div>
+      </div>
+    </div>
+    
+    <div class="protocol-step reveal">
+      <div class="step-number">04</div>
+      <div class="step-content">
+        <h4>LAUNCH SYSTEM INTERFACE</h4>
+        <p>Open ZARA AI. The boot sequence will initiate — holographic core will activate and system diagnostics will run automatically.</p>
+        <div class="step-status">▸ BOOT SEQUENCE ACTIVE</div>
+      </div>
+    </div>
+    
+    <div class="protocol-step reveal">
+      <div class="step-number">05</div>
+      <div class="step-content">
+        <h4>ACTIVATE AI CORE</h4>
+        <p>Tap the central reactor to wake ZARA. Voice calibration will begin. Speak your activation phrase to establish neural handshake.</p>
+        <div class="step-status">▸ NEURAL HANDSHAKE PENDING</div>
+      </div>
+    </div>
+    
+    <div class="protocol-step reveal">
+      <div class="step-number">06</div>
+      <div class="step-content">
+        <h4>CONFIGURE GUARDIAN MODE</h4>
+        <p>Enable Guardian Mode for real-time device protection, threat monitoring, and security alert notifications.</p>
+        <div class="step-status">▸ GUARDIAN STANDBY</div>
+      </div>
+    </div>
+    
+    <div class="protocol-step reveal">
+      <div class="step-number">07</div>
+      <div class="step-content">
+        <h4>RUN FIRST SYSTEM SCAN</h4>
+        <p>Execute the initial diagnostic scan. ZARA will analyze device health, optimize performance, and establish baseline security metrics.</p>
+        <div class="step-status">▸ SCAN READY</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SECTION 4: MANUAL ==================== -->
+<section id="manual" class="section">
+  <div class="section-tag reveal">// OPERATIONAL GUIDE</div>
+  <h2 class="section-title reveal">OPERATION MANUAL</h2>
+  <div class="section-line reveal"></div>
+  <p class="section-subtitle reveal">Master the interface. Unlock the full potential of ZARA AI.</p>
+  
+  <div class="manual-grid">
+    <div class="manual-card reveal" onclick="this.classList.toggle('expanded')">
+      <div class="manual-icon">🎤</div>
+      <h4>VOICE ACTIVATION</h4>
+      <p>Wake ZARA with your voice command. Natural language processing understands context and intent.</p>
+      <div class="manual-expand">
+        Simply say "Hey ZARA" followed by your command. The AI processes speech in real-time using advanced neural networks. 
+        Supports multiple languages and adapts to your voice pattern over time for improved accuracy.
+      </div>
+    </div>
+    
+    <div class="manual-card reveal" onclick="this.classList.toggle('expanded')">
+      <div class="manual-icon">⌨️</div>
+      <h4>COMMAND INTERACTION</h4>
+      <p>Type or speak commands to control every aspect of the system through the unified command layer.</p>
+      <div class="manual-expand">
+        Access the command panel by swiping up or typing. Use natural language or advanced command syntax. 
+        ZARA understands complex multi-step instructions and can chain operations together seamlessly.
+      </div>
+    </div>
+    
+    <div class="manual-card reveal" onclick="this.classList.toggle('expanded')">
+      <div class="manual-icon">🛡️</div>
+      <h4>GUARDIAN MODE</h4>
+      <p>Activate real-time protection. ZARA monitors threats and alerts you to security anomalies.</p>
+      <div class="manual-expand">
+        Guardian Mode runs a continuous background scan, monitoring app behavior, network connections, and file integrity. 
+        Receive instant alerts for suspicious activity with detailed threat analysis and recommended actions.
+      </div>
+    </div>
+    
+    <div class="manual-card reveal" onclick="this.classList.toggle('expanded')">
+      <div class="manual-icon">🔍</div>
+      <h4>SECURITY SCAN</h4>
+      <p>Trigger deep device scans to identify vulnerabilities, malware signatures, and performance issues.</p>
+      <div class="manual-expand">
+        Three scan levels available: Quick Scan (30 seconds), Standard Scan (2 minutes), and Deep Scan (5 minutes). 
+        Each level provides increasingly detailed analysis with visual threat maps and remediation steps.
+      </div>
+    </div>
+    
+    <div class="manual-card reveal" onclick="this.classList.toggle('expanded')">
+      <div class="manual-icon">🎨</div>
+      <h4>CUSTOMIZATION</h4>
+      <p>Personalize ZARA's visual theme, voice, response style, and interface layout to match your preferences.</p>
+      <div class="manual-expand">
+        Choose from multiple holographic themes including Cyan Matrix, Violet Storm, and Emerald Shield. 
+        Customize animation speed, voice tone, response verbosity, and notification preferences.
+      </div>
+    </div>
+    
+    <div class="manual-card reveal" onclick="this.classList.toggle('expanded')">
+      <div class="manual-icon">⚙️</div>
+      <h4>ADVANCED CONTROL</h4>
+      <p>Access the developer panel for advanced diagnostics, system overrides, and experimental features.</p>
+      <div class="manual-expand">
+        Triple-tap the core to access the Advanced Control Panel. Here you can view system logs, 
+        modify AI behavior parameters, enable experimental features, and access the API for custom integrations.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SECTION 5: CAPABILITIES ==================== -->
+<section id="capabilities" class="section">
+  <div class="section-tag reveal">// SYSTEM CLASSIFICATION — LEVEL 5</div>
+  <h2 class="section-title reveal">CAPABILITIES MATRIX</h2>
+  <div class="section-line reveal"></div>
+  <p class="section-subtitle reveal">Classified operational capabilities of the ZARA Intelligence Engine.</p>
+  
+  <div class="cap-grid">
+    <div class="cap-card reveal">
+      <div class="cap-card-tag">MODULE — 001</div>
+      <h4>VOICE ACTIVATED INTELLIGENCE</h4>
+      <p>Natural language processing with contextual understanding. Speak naturally — ZARA comprehends intent, emotion, and nuance.</p>
+      <div class="cap-card-status"><div class="cap-status-dot"></div>ACTIVE</div>
+    </div>
+    
+    <div class="cap-card reveal">
+      <div class="cap-card-tag">MODULE — 002</div>
+      <h4>REAL-TIME GUARDIAN</h4>
+      <p>Continuous monitoring of device security. Threat detection, anomaly alerts, and automatic protective responses.</p>
+      <div class="cap-card-status"><div class="cap-status-dot"></div>ACTIVE</div>
+    </div>
+    
+    <div class="cap-card reveal">
+      <div class="cap-card-tag">MODULE — 003</div>
+      <h4>DEVICE THREAT SIMULATION</h4>
+      <p>Simulate attack vectors to test your device's defenses. Identify vulnerabilities before they become problems.</p>
+      <div class="cap-card-status"><div class="cap-status-dot"></div>ACTIVE</div>
+    </div>
+    
+    <div class="cap-card reveal">
+      <div class="cap-card-tag">MODULE — 004</div>
+      <h4>HOLOGRAPHIC INTERFACE</h4>
+      <p>Cinematic visual experience with real-time reactive animations, holographic overlays, and depth-aware UI elements.</p>
+      <div class="cap-card-status"><div class="cap-status-dot"></div>ACTIVE</div>
+    </div>
+    
+    <div class="cap-card reveal">
+      <div class="cap-card-tag">MODULE — 005</div>
+      <h4>MOOD REACTIVE UI</h4>
+      <p>Interface adapts to your interaction patterns. Colors, animations, and responses shift based on detected mood and usage.</p>
+      <div class="cap-card-status"><div class="cap-status-dot"></div>ACTIVE</div>
+    </div>
+    
+    <div class="cap-card reveal">
+      <div class="cap-card-tag">MODULE — 006</div>
+      <h4>SECURITY ALERTS</h4>
+      <p>Instant notifications for detected threats, unusual app behavior, unauthorized access attempts, and network anomalies.</p>
+      <div class="cap-card-status"><div class="cap-status-dot"></div>ACTIVE</div>
+    </div>
+    
+    <div class="cap-card reveal">
+      <div class="cap-card-tag">MODULE — 007</div>
+      <h4>MATRIX VISUALIZATION</h4>
+      <p>Immersive data visualization mode. See your device's digital ecosystem rendered in real-time holographic matrix form.</p>
+      <div class="cap-card-status"><div class="cap-status-dot"></div>ACTIVE</div>
+    </div>
+    
+    <div class="cap-card reveal">
+      <div class="cap-card-tag">MODULE — 008</div>
+      <h4>ADAPTIVE AI LEARNING</h4>
+      <p>ZARA learns your patterns, preferences, and habits. Becomes more personalized and efficient with every interaction.</p>
+      <div class="cap-card-status"><div class="cap-status-dot"></div>ACTIVE</div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SECTION 6: PRICING ==================== -->
+<section id="pricing" class="section">
+  <div class="section-tag reveal">// ACCESS AUTHORIZATION</div>
+  <h2 class="section-title reveal">PREMIUM ACCESS MODULE</h2>
+  <div class="section-line reveal"></div>
+  <p class="section-subtitle reveal">Select your access tier. Unlock the intelligence.</p>
+  
+  <div class="pricing-grid">
+    <div class="price-card reveal">
+      <div class="price-duration">1 WEEK</div>
+      <div class="price-amount"><span class="currency">₹</span>299</div>
+      <div class="price-period">Basic Core Access</div>
+      <ul class="price-features">
+        <li>Basic Core Access</li>
+        <li>Limited Guardian Mode</li>
+        <li>Standard Interface</li>
+        <li>Email Support</li>
+      </ul>
+      <button class="price-btn" onclick="activatePrice(this)">INITIALIZE</button>
+    </div>
+    
+    <div class="price-card reveal">
+      <div class="price-duration">3 MONTHS</div>
+      <div class="price-amount"><span class="currency">₹</span>599</div>
+      <div class="price-period">Advanced Command Layer</div>
+      <ul class="price-features">
+        <li>Advanced Command Layer</li>
+        <li>Full Guardian Mode</li>
+        <li>Custom Themes</li>
+        <li>Voice Customization</li>
+        <li>Priority Support</li>
+      </ul>
+      <button class="price-btn" onclick="activatePrice(this)">INITIALIZE</button>
+    </div>
+    
+    <div class="price-card featured reveal">
+      <div class="price-duration">1 YEAR</div>
+      <div class="price-amount"><span class="currency">₹</span>999</div>
+      <div class="price-period">Full AI Logic Access</div>
+      <ul class="price-features">
+        <li>Full AI Logic Access</li>
+        <li>Advanced Engine</li>
+        <li>Priority Updates</li>
+        <li>All Themes Unlocked</li>
+        <li>Matrix Visualization</li>
+        <li>24/7 Support</li>
+      </ul>
+      <button class="price-btn" onclick="activatePrice(this)">INITIALIZE</button>
+    </div>
+    
+    <div class="price-card reveal">
+      <div class="price-duration">LIFETIME</div>
+      <div class="price-amount"><span class="currency">₹</span>2999</div>
+      <div class="price-period">Everything Unlocked</div>
+      <ul class="price-features">
+        <li>Everything Unlocked</li>
+        <li>Future Updates Free</li>
+        <li>Premium Support</li>
+        <li>Experimental Access</li>
+        <li>Developer Mode</li>
+        <li>Beta Features</li>
+        <li>Custom AI Training</li>
+      </ul>
+      <button class="price-btn" onclick="activatePrice(this)">INITIALIZE</button>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SECTION 7: SOCIAL ==================== -->
+<section id="social" class="section">
+  <div class="section-tag reveal">// NETWORK CHANNELS</div>
+  <h2 class="section-title reveal">CONNECT TO THE NETWORK</h2>
+  <div class="section-line reveal"></div>
+  
+  <div class="social-grid">
+    <a href="https://t.me/mahakalAidevloper" class="social-icon reveal" aria-label="Telegram">
+      <svg viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+      <span class="social-label">TELEGRAM</span>
+    </a>
+    
+    <a href="https://www.instagram.com/mahakal._ravi?igsh=b3Q0NHZqbGxlcjBp" class="social-icon reveal" aria-label="Instagram">
+      <svg viewBox="0 0 24 24"><path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.667 1.079-1.335 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 1 0 0-12.324zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405a1.441 1.441 0 1 1-2.88 0 1.441 1.441 0 0 1 2.88 0z"/></svg>
+      <span class="social-label">INSTAGRAM</span>
+    </a>
+    
+    <a href="https://wa.me/qr/XQSIACVZQQ6YG1" class="social-icon reveal" aria-label="WhatsApp">
+      <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+      <span class="social-label">WHATSAPP</span>
+    </a>
+    
+    <a href="https://www.facebook.com/share/1BCLcrFmf5/" class="social-icon reveal" aria-label="Facebook">
+      <svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+      <span class="social-label">FACEBOOK</span>
+    </a>
+    
+    <a href="https://github.com/ravisingh-web" class="social-icon reveal" aria-label="GitHub">
+      <svg viewBox="0 0 24 24"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+      <span class="social-label">GITHUB</span>
+    </a>
+    
+    <a href="https://youtube.com/@mahakalzzx" class="social-icon reveal" aria-label="YouTube">
+      <svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+      <span class="social-label">YOUTUBE</span>
+    </a>
+  </div>
+</section>
+
+<!-- ==================== SECTION 8: DOWNLOAD ==================== -->
+<section id="download" class="section">
+  <div class="section-tag reveal">// SYSTEM DEPLOYMENT</div>
+  <h2 class="section-title reveal">DEPLOY ZARA AI</h2>
+  <div class="section-line reveal"></div>
+  <p class="section-subtitle reveal">
+    Begin the initialization sequence. Download and activate your personal AI guardian.
+  </p>
+
+  <!-- DOWNLOAD BUTTON -->
+  <button class="download-btn reveal" id="downloadBtn" onclick="triggerDownload(this)">
+    <span>INITIALIZE ZARA AI</span>
+  </button>
+
+  <!-- DOWNLOAD PROGRESS UI -->
+  <div id="download-ui" style="margin-top:30px; display:none;">
+    <div style="font-family:'Share Tech Mono', monospace; letter-spacing:3px; font-size:12px; margin-bottom:10px;">
+      DOWNLOADING PACKAGE...
+    </div>
+
+    <div style="width:100%; height:8px; background:rgba(0,255,255,0.1); border-radius:10px; overflow:hidden;">
+      <div id="progressBar" style="height:100%; width:0%; background:#00f0ff; transition:width 0.3s;"></div>
+    </div>
+
+    <div id="progressText" style="margin-top:8px; font-size:11px; opacity:0.7;">
+      0%
+    </div>
+  </div>
+
+  <div class="download-sub reveal">v3.0.1 — STABLE RELEASE — 50MB</div>
+</section>
+
+<!-- FOOTER -->
+<footer id="footer">
+  <div class="footer-line-art"></div>
+  <div class="footer-text">DESIGNED & ENGINEERED BY</div>
+  <div class="footer-brand">MAHAKAL RAVI</div>
+</footer>
+
+
+<script>
+// =====================================================
+// LOADING SCREEN
+// =====================================================
+(function() {
+  const loadBar = document.getElementById('load-bar');
+  const loadPercent = document.getElementById('load-percent');
+  const loadScreen = document.getElementById('loading-screen');
+  let progress = 0;
+  
+  const loadInterval = setInterval(() => {
+    progress += Math.random() * 8 + 2;
+    if (progress >= 100) {
+      progress = 100;
+      clearInterval(loadInterval);
+      setTimeout(() => {
+        loadScreen.classList.add('hidden');
+        initAll();
+      }, 500);
+    }
+    loadBar.style.width = progress + '%';
+    loadPercent.textContent = Math.floor(progress) + '%';
+  }, 80);
+})();
+
+// =====================================================
+// BIOMETRIC GRID CANVAS BACKGROUND
+// =====================================================
+function initCanvas() {
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  let w, h;
+  let particles = [];
+  let gridLines = [];
+  let waveTime = 0;
+  
+  function resize() {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+    initParticles();
+    initGrid();
+  }
+  
+  function initParticles() {
+    particles = [];
+    const count = Math.min(Math.floor((w * h) / 15000), 80);
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        size: Math.random() * 1.5 + 0.5,
+        alpha: Math.random() * 0.3 + 0.1
+      });
+    }
+  }
+  
+  function initGrid() {
+    gridLines = [];
+    const spacing = 80;
+    for (let x = 0; x < w; x += spacing) {
+      gridLines.push({ x1: x, y1: 0, x2: x, y2: h, vertical: true });
+    }
+    for (let y = 0; y < h; y += spacing) {
+      gridLines.push({ x1: 0, y1: y, x2: w, y2: y, vertical: false });
+    }
+  }
+  
+  function drawGrid() {
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.02)';
+    ctx.lineWidth = 0.5;
+    gridLines.forEach(line => {
+      ctx.beginPath();
+      ctx.moveTo(line.x1, line.y1);
+      ctx.lineTo(line.x2, line.y2);
+      ctx.stroke();
+    });
+    
+    // Grid intersection dots
+    const spacing = 80;
+    ctx.fillStyle = 'rgba(0, 240, 255, 0.04)';
+    for (let x = 0; x < w; x += spacing) {
+      for (let y = 0; y < h; y += spacing) {
+        ctx.beginPath();
+        ctx.arc(x, y, 1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+  
+  function drawParticles() {
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      
+      if (p.x < 0) p.x = w;
+      if (p.x > w) p.x = 0;
+      if (p.y < 0) p.y = h;
+      if (p.y > h) p.y = 0;
+      
+      ctx.fillStyle = `rgba(0, 240, 255, ${p.alpha})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    
+    // Connection lines
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.03)';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = dx * dx + dy * dy;
+        if (dist < 20000) {
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+  }
+  
+  function drawWaveform() {
+    waveTime += 0.015;
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.04)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = 0; x < w; x += 3) {
+      const y = h * 0.5 + Math.sin(x * 0.005 + waveTime) * 30 + Math.sin(x * 0.01 + waveTime * 1.5) * 15;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    
+    // Second wave
+    ctx.strokeStyle = 'rgba(68, 136, 255, 0.03)';
+    ctx.beginPath();
+    for (let x = 0; x < w; x += 3) {
+      const y = h * 0.5 + Math.sin(x * 0.003 - waveTime * 0.8) * 50 + Math.cos(x * 0.008 + waveTime) * 20;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  
+  function drawDNAHelix() {
+    const centerX = w * 0.88;
+    const startY = h * 0.2;
+    const endY = h * 0.8;
+    
+    ctx.lineWidth = 1;
+    for (let y = startY; y < endY; y += 3) {
+      const t = (y - startY) / (endY - startY);
+      const offset = Math.sin(t * Math.PI * 6 + waveTime * 2) * 25;
+      const alpha = 0.06 * Math.sin(t * Math.PI);
+      
+      ctx.fillStyle = `rgba(0, 240, 255, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(centerX + offset, y, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = `rgba(136, 68, 255, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(centerX - offset, y, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Connecting bars
+      if (Math.floor(y) % 20 < 3) {
+        ctx.strokeStyle = `rgba(0, 240, 255, ${alpha * 0.5})`;
+        ctx.beginPath();
+        ctx.moveTo(centerX + offset, y);
+        ctx.lineTo(centerX - offset, y);
+        ctx.stroke();
+      }
+    }
+  }
+  
+  function drawFingerprint() {
+    const cx = w * 0.12;
+    const cy = h * 0.75;
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.03)';
+    ctx.lineWidth = 0.5;
+    
+    for (let r = 10; r < 60; r += 6) {
+      ctx.beginPath();
+      const startAngle = Math.sin(r * 0.1 + waveTime) * 0.5;
+      const endAngle = startAngle + Math.PI * 1.5 + Math.sin(r * 0.05) * 0.5;
+      ctx.arc(cx, cy, r, startAngle, endAngle);
+      ctx.stroke();
+    }
+  }
+  
+  function animate() {
+    ctx.clearRect(0, 0, w, h);
+    
+    // Subtle radial gradient background
+    const grad = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w * 0.7);
+    grad.addColorStop(0, 'rgba(0, 20, 40, 0.3)');
+    grad.addColorStop(1, 'rgba(0, 5, 10, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+    
+    drawGrid();
+    drawWaveform();
+    drawParticles();
+    drawDNAHelix();
+    drawFingerprint();
+    
+    requestAnimationFrame(animate);
+  }
+  
+  resize();
+  window.addEventListener('resize', resize);
+  animate();
+}
+
+// =====================================================
+// CORE TICK MARKS
+// =====================================================
+function initCoreTicks() {
+  const container = document.getElementById('core-ticks');
+  if (!container) return;
+  const count = 72;
+  for (let i = 0; i < count; i++) {
+    const tick = document.createElement('div');
+    tick.className = 'tick';
+    const angle = (360 / count) * i;
+    const radius = 48; // percentage
+    tick.style.transformOrigin = `center ${radius}%`;
+    tick.style.transform = `rotate(${angle}deg)`;
+    tick.style.left = '50%';
+    tick.style.top = `${50 - radius}%`;
+    tick.style.opacity = (i % 6 === 0) ? '0.4' : '0.15';
+    tick.style.height = (i % 6 === 0) ? '10px' : '5px';
+    container.appendChild(tick);
+  }
+}
+
+// =====================================================
+// CORE INTERACTION
+// =====================================================
+function initCoreInteraction() {
+  const core = document.getElementById('ai-core');
+  const glitch = document.getElementById('glitch-overlay');
+  const diagCore = document.getElementById('diag-core');
+  
+  if (!core) return;
+  
+  core.addEventListener('mouseenter', () => {
+    core.style.filter = 'brightness(1.2)';
+    if (diagCore) diagCore.textContent = 'CORE: SCANNING';
+  });
+  
+  core.addEventListener('mouseleave', () => {
+    core.style.filter = 'brightness(1)';
+    if (diagCore) diagCore.textContent = 'CORE: IDLE';
+  });
+  
+  core.addEventListener('click', () => {
+    // Diagnostic burst
+    core.style.transition = 'filter 0.1s ease';
+    core.style.filter = 'brightness(1.8) saturate(1.5)';
+    if (diagCore) diagCore.textContent = 'CORE: BURST DETECTED';
+    
+    if (glitch) {
+      glitch.classList.add('active');
+      setTimeout(() => glitch.classList.remove('active'), 200);
+    }
+    
+    setTimeout(() => {
+      core.style.filter = 'brightness(1)';
+      if (diagCore) diagCore.textContent = 'CORE: IDLE';
+    }, 600);
+  });
+}
+
+// =====================================================
+// SCROLL REVEAL (Intersection Observer)
+// =====================================================
+function initReveal() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, index) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => {
+          entry.target.classList.add('visible');
+        }, index * 80);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+  
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  document.querySelectorAll('.story-paragraph').forEach(el => observer.observe(el));
+}
+
+// =====================================================
+// NAV DOTS
+// =====================================================
+function initNavDots() {
+  const dots = document.querySelectorAll('.nav-dot');
+  const sections = ['hero', 'story', 'protocol', 'manual', 'capabilities', 'pricing', 'social', 'download'];
+  
+  dots.forEach(dot => {
+    dot.addEventListener('click', () => {
+      const target = dot.getAttribute('data-section');
+      const el = document.getElementById(target);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+  
+  // Update active dot on scroll
+  const updateActiveDot = () => {
+    const scrollY = window.scrollY;
+    const winH = window.innerHeight;
+    
+    sections.forEach((id, i) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      if (rect.top <= winH / 2 && rect.bottom >= winH / 2) {
+        dots.forEach(d => d.classList.remove('active'));
+        if (dots[i]) dots[i].classList.add('active');
+      }
+    });
+  };
+  
+  window.addEventListener('scroll', updateActiveDot, { passive: true });
+}
+
+// =====================================================
+// DIAGNOSTICS OVERLAY
+// =====================================================
+function initDiagnostics() {
+  const diagFps = document.getElementById('diag-fps');
+  const diagScroll = document.getElementById('diag-scroll');
+  const diagStatus = document.getElementById('diag-status');
+  
+  // FPS counter
+  let lastTime = performance.now();
+  let frameCount = 0;
+  let fps = 60;
+  
+  function updateFps() {
+    frameCount++;
+    const now = performance.now();
+    if (now - lastTime >= 1000) {
+      fps = frameCount;
+      frameCount = 0;
+      lastTime = now;
+      if (diagFps) diagFps.textContent = 'FPS: ' + fps;
+    }
+    requestAnimationFrame(updateFps);
+  }
+  updateFps();
+  
+  // Scroll percentage
+  window.addEventListener('scroll', () => {
+    const scrollH = document.documentElement.scrollHeight - window.innerHeight;
+    const percent = scrollH > 0 ? Math.round((window.scrollY / scrollH) * 100) : 0;
+    if (diagScroll) diagScroll.textContent = 'SCROLL: ' + percent + '%';
+  }, { passive: true });
+  
+  // Random status updates
+  const statuses = ['STATUS: NOMINAL', 'STATUS: SCANNING', 'STATUS: ALL CLEAR', 'STATUS: MONITORING', 'STATUS: ACTIVE'];
+  setInterval(() => {
+    if (diagStatus) {
+      diagStatus.textContent = statuses[Math.floor(Math.random() * statuses.length)];
+    }
+  }, 5000);
+}
+
+// =====================================================
+// STORY TYPING EFFECT
+// =====================================================
+function initStoryTyping() {
+  const el = document.getElementById('story-typing');
+  if (!el) return;
+  
+  const text = '> Accessing classified origin files... AUTHORIZED.';
+  let i = 0;
+  let started = false;
+  
+  const observer = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting && !started) {
+      started = true;
+      type();
+    }
+  }, { threshold: 0.5 });
+  
+  observer.observe(el);
+  
+  function type() {
+    if (i < text.length) {
+      el.innerHTML = text.substring(0, i + 1) + '<span class="typing-cursor"></span>';
+      i++;
+      setTimeout(type, 40 + Math.random() * 40);
+    } else {
+      el.innerHTML = text + '<span class="typing-cursor"></span>';
+    }
+  }
+}
+
+// =====================================================
+// PRICING BUTTON ACTIVATION
+// =====================================================
+function activatePrice(btn) {
+  btn.classList.add('activated');
+  btn.textContent = '◆ CONFIRMED';
+  
+  const glitch = document.getElementById('glitch-overlay');
+  if (glitch) {
+    glitch.classList.add('active');
+    setTimeout(() => glitch.classList.remove('active'), 200);
+  }
+  
+  setTimeout(() => {
+    btn.classList.remove('activated');
+    btn.textContent = 'INITIALIZE';
+  }, 2000);
+}
+
+// =====================================================
+// DOWNLOAD BUTTON
+// =====================================================
+function triggerDownload(btn) {
+  btn.classList.add('flash-active');
+  const diagCore = document.getElementById('diag-core');
+  if (diagCore) diagCore.textContent = 'CORE: DEPLOYING';
+  
+  const glitch = document.getElementById('glitch-overlay');
+  if (glitch) {
+    glitch.classList.add('active');
+    setTimeout(() => glitch.classList.remove('active'), 200);
+  }
+  
+  const originalText = btn.querySelector('span').textContent;
+  btn.querySelector('span').textContent = '◆ INITIALIZING...';
+
+  // ✅ Actual APK download - programmatic anchor click (no popup block)
+  setTimeout(() => {
+    const a = document.createElement('a');
+    a.href = 'https://github.com/ravisingh-web/zara/releases/download/build-89/app-arm64-v8a-debug.apk';
+    a.download = 'ZARA-AI.apk';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }, 800);
+  
+  setTimeout(() => {
+    btn.querySelector('span').textContent = '✓ ZARA ACTIVATED';
+    btn.style.borderColor = '#00ff88';
+    btn.style.color = '#00ff88';
+  }, 1500);
+  
+  setTimeout(() => {
+    btn.classList.remove('flash-active');
+    btn.querySelector('span').textContent = originalText;
+    btn.style.borderColor = '';
+    btn.style.color = '';
+    if (diagCore) diagCore.textContent = 'CORE: IDLE';
+  }, 4000);
+}
+
+// =====================================================
+// SUBTLE GLITCH TRIGGER
+// =====================================================
+function initGlitchTimer() {
+  const glitch = document.getElementById('glitch-overlay');
+  setInterval(() => {
+    if (Math.random() > 0.7 && glitch) {
+      glitch.classList.add('active');
+      setTimeout(() => glitch.classList.remove('active'), 150);
+    }
+  }, 8000);
+}
+
+// =====================================================
+// SCROLL-BASED CORE INTENSITY
+// =====================================================
+function initScrollIntensity() {
+  const coreGlow = document.querySelector('.core-glow');
+  const scannerArc = document.querySelector('.scanner-arc');
+  
+  window.addEventListener('scroll', () => {
+    const scrollY = window.scrollY;
+    const maxScroll = 800;
+    const intensity = Math.min(scrollY / maxScroll, 1);
+    
+    if (coreGlow) {
+      coreGlow.style.filter = `blur(${2 - intensity * 1.5}px)`;
+      coreGlow.style.opacity = 0.6 + intensity * 0.4;
+    }
+  }, { passive: true });
+}
+
+// =====================================================
+// INITIALIZE ALL
+// =====================================================
+function initAll() {
+  initCanvas();
+  initCoreTicks();
+  initCoreInteraction();
+  initReveal();
+  initNavDots();
+  initDiagnostics();
+  initStoryTyping();
+  initGlitchTimer();
+  initScrollIntensity();
+  
+  // Trigger hero animations
+  document.getElementById('hero').style.opacity = '1';
+}
+</script>
+
+</body>
+</html>
